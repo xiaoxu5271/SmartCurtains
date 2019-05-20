@@ -24,7 +24,7 @@
 #include "Bluetooth.h"
 #include "Led.h"
 
-static const char *TAG = "MQTT";
+static const char *TAG = "MQTT_SAMPLE";
 
 extern const int CONNECTED_BIT;
 
@@ -38,10 +38,8 @@ static esp_err_t mqtt_event_handler(esp_mqtt_event_handle_t event)
     //printf("!!!!!!!!!!!!!!!!!topic=%s\n",topic);
     switch (event->event_id)
     {
-
-case MQTT_EVENT_BEFORE_CONNECT:
+        case MQTT_EVENT_BEFORE_CONNECT:
         break;
-
     case MQTT_EVENT_CONNECTED:
         ESP_LOGI(TAG, "MQTT_EVENT_CONNECTED");
         msg_id = esp_mqtt_client_subscribe(client, topic, 0);
@@ -71,7 +69,6 @@ case MQTT_EVENT_BEFORE_CONNECT:
         break;
     case MQTT_EVENT_DATA:
         ESP_LOGI(TAG, "MQTT_EVENT_DATA");
-        Led_Status=LED_STA_RECVDATA;
         //printf("TOPIC=%.*s\r\n", event->topic_len, event->topic);
         //printf("DATA=%.*s\r\n", event->data_len, event->data);
         //printf("strchr --> %s", strchr(event->data, "{"));

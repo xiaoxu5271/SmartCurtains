@@ -12,7 +12,7 @@ extern const int CONNECTED_BIT;
 extern uint8_t data_read[34];
 
 static char *TAG = "HTTP";
-
+uint32_t HTTP_STATUS = HTTP_KEY_GET;
 uint8_t six_time_count = 4;
 
 struct HTTP_STA
@@ -83,16 +83,41 @@ void http_get_task(void *pvParameters)
     struct addrinfo *res;
     struct in_addr *addr;
     int32_t s = 0, r = 0;
-
+    //char post_date[256];
+    //char *json_data = NULL;
     char recv_buf[1024];
+
+
     char build_heart_url[256];
+
+
+    //int json_len;
+
+
+    //json_data = malloc((strlen(create_http_json())));
+
+    //printf("http.GET %s\r\nhttp.POST %s\r\nhttp.WEB_URL1 %s\r\nhttp.WEB_URL2 %s\r\nhttp.HTTP_VERSION %s\r\nhttp.HOST %s\r\nhttp.USER_AHENT %s\r\nhttp.ENTER %s\r\n",
+    //       http.GET, http.POST, http.WEB_URL1, http.WEB_URL2, http.HTTP_VERSION, http.HOST, http.USER_AHENT, http.ENTER);
+    
 
 
     sprintf(build_heart_url, "%s%s%s%s%s%s%s", http.GET, http.HEART_BEAT, ApiKey, 
             http.HTTP_VERSION10, http.HOST, http.USER_AHENT, http.ENTER);
+    //build_get_json[512] = create_http_json();
 
+    //printf("%s\r\n %d\r\n", pCreat_json->creat_json_b, pCreat_json->creat_json_c);
+    //printf("%s", build_get_json);
+    //strncpy(build_get_json, pCreat_json->creat_json_b, pCreat_json->creat_json_c);
+    //printf("%s", json_data);
 
-   
+    //free(json_data);
+
+    strcpy(mqtt_json_s.mqtt_mode, "1");//给模式初值为自动模式
+    mqtt_json_s.mqtt_sun_condition=1;//初始化为晴天
+    
+    //mqtt_json_s.mqtt_height=0;
+    //mqtt_json_s.mqtt_angle=0;
+    //http_send_mes(POST_ALLDOWN);     
     /***打开定时器10s开启一次***/
     esp_timer_create(&http_suspend, &http_suspend_p);
     esp_timer_start_periodic(http_suspend_p, 1000 * 1000 * 10);
@@ -103,14 +128,17 @@ void http_get_task(void *pvParameters)
         /* Wait for the callback to set the CONNECTED_BIT in the
            event group.a
         */
-
+        WifiStatus=WIFISTATUS_DISCONNET;
         xEventGroupWaitBits(wifi_event_group, CONNECTED_BIT,
                             false, true, portMAX_DELAY);
         ESP_LOGI(TAG, "Connected to AP");
+        WifiStatus=WIFISTATUS_CONNET;
+        ESP_LOGI(TAG, "Now Work Status=%d",work_status);
+        ESP_LOGI("RAM", "Free Heap:%d,%d", esp_get_free_heap_size(), heap_caps_get_free_size(MALLOC_CAP_8BIT));
 
-             
-        six_time_count++;//定时10s
-        if (six_time_count >= 1)
+        
+        six_time_count++;//定时60s
+        if (six_time_count >= 6)
         {
             six_time_count = 0;
 
@@ -170,7 +198,7 @@ void http_get_task(void *pvParameters)
                 continue;
             }
             ESP_LOGI(TAG, "... heartbeat send success=\n%s",build_heart_url);
-            
+            //ESP_LOGI("wifi", "4free Heap:%d,%d", esp_get_free_heap_size(), heap_caps_get_free_size(MALLOC_CAP_8BIT));
 
             struct timeval receiving_timeout;
             receiving_timeout.tv_sec = 5;
@@ -185,24 +213,24 @@ void http_get_task(void *pvParameters)
 
             }
             ESP_LOGI(TAG, "... set socket receiving timeout success");
-            
+            //ESP_LOGI("wifi", "5free Heap:%d,%d", esp_get_free_heap_size(), heap_caps_get_free_size(MALLOC_CAP_8BIT));
 
             /* Read HTTP response */
             bzero(recv_buf, sizeof(recv_buf));
             r = read(s, recv_buf, sizeof(recv_buf) - 1);
             printf("r=%d,hart_recv_data=%s\r\n", r,recv_buf);
             close(s);
-            
+            //ESP_LOGI("wifi", "6free Heap:%d,%d", esp_get_free_heap_size(), heap_caps_get_free_size(MALLOC_CAP_8BIT));
             if(r>0)
             {
                 parse_objects_heart(strchr(recv_buf, '{'));  
-                http_send_mes();   
+                http_send_mes(POST_NOCOMMAND);   
             } 
             else
             {
                  printf("hart recv 0!\r\n");
             }  
-           
+            //ESP_LOGI("wifi", "7free Heap:%d,%d", esp_get_free_heap_size(), heap_caps_get_free_size(MALLOC_CAP_8BIT));            
         } 
         stop:
         vTaskSuspend(httpHandle);
@@ -300,7 +328,7 @@ int http_activate(void)
     }
 }
 
-void http_send_mes()  //上传传感器数据
+void http_send_mes(uint8_t post_status)
 {
     const struct addrinfo hints = {
         .ai_family = AF_INET,
@@ -314,14 +342,22 @@ void http_send_mes()  //上传传感器数据
     char build_po_url_json[1024];
     int32_t s = 0, r = 0;
     creat_json *pCreat_json1=malloc(sizeof(creat_json));
- 
+    //pCreat_json1->creat_json_b=malloc(1024);
+
+    //ESP_LOGI("wifi", "1free Heap:%d,%d", esp_get_free_heap_size(), heap_caps_get_free_size(MALLOC_CAP_8BIT));  
     //创建POST的json格式
-    create_http_json(pCreat_json1);
+    create_http_json(post_status,pCreat_json1);
 
-
-    sprintf(build_po_url, "%s%s%s%s%s%s%s%s%s%s%s%s%s%d%s", http.POST, http.POST_URL1, ApiKey, http.POST_URL_FIRMWARE,FIRMWARE,http.POST_URL_SSID,wifi_data.wifi_ssid,http.POST_URL_COMMAND_ID, mqtt_json_s.mqtt_command_id,
-        http.HTTP_VERSION11, http.HOST, http.USER_AHENT, http.CONTENT_LENGTH, pCreat_json1->creat_json_c, http.ENTER);
-    
+    if(post_status==POST_NOCOMMAND)//无commID
+    {
+        sprintf(build_po_url, "%s%s%s%s%s%s%s%s%s%s%s%d%s", http.POST, http.POST_URL1, ApiKey, http.POST_URL_FIRMWARE,FIRMWARE,http.POST_URL_SSID,wifi_data.wifi_ssid,
+            http.HTTP_VERSION11, http.HOST, http.USER_AHENT, http.CONTENT_LENGTH, pCreat_json1->creat_json_c, http.ENTER);
+    }
+    else
+    {
+        sprintf(build_po_url, "%s%s%s%s%s%s%s%s%s%s%s%d%s", http.POST, http.POST_URL1, ApiKey, http.POST_URL_SSID,wifi_data.wifi_ssid,http.POST_URL_COMMAND_ID, mqtt_json_s.mqtt_command_id,
+            http.HTTP_VERSION11, http.HOST, http.USER_AHENT, http.CONTENT_LENGTH, pCreat_json1->creat_json_c, http.ENTER);
+    }
 
     sprintf(build_po_url_json, "%s%s", build_po_url, pCreat_json1->creat_json_b);
     
@@ -381,15 +417,19 @@ void http_send_mes()  //上传传感器数据
     }
     ESP_LOGI(TAG, "... http socket send success");
 
-    Led_Status=LED_STA_SENDDATA;
 
     //设置接收
     struct timeval receiving_timeout;
-
-
-    receiving_timeout.tv_sec = 5;
-    receiving_timeout.tv_usec = 0;
-    
+    if(work_status==WORK_HAND)//手动控制时的超时时间缩短，避免上传等待respond时，不运行指令
+    {
+        receiving_timeout.tv_sec = 0;
+        receiving_timeout.tv_usec = 100;
+    }
+    else
+    {
+        receiving_timeout.tv_sec = 5;
+        receiving_timeout.tv_usec = 0;
+    }
     if (setsockopt(s, SOL_SOCKET, SO_RCVTIMEO, &receiving_timeout,
                    sizeof(receiving_timeout)) < 0)
     {

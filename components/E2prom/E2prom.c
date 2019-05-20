@@ -5,18 +5,7 @@
 #include "driver/i2c.h"
 #include "E2prom.h"
 
-#define I2C_MASTER_SCL_IO               (GPIO_NUM_14)               /*!< gpio number for I2C master clock */
-#define I2C_MASTER_SDA_IO               (GPIO_NUM_27)               /*!< gpio number for I2C master data  */
-#define I2C_MASTER_NUM                  I2C_NUM_1        /*!< I2C port number for master dev */
-#define I2C_MASTER_TX_BUF_DISABLE       0                /*!< I2C master do not need buffer */
-#define I2C_MASTER_RX_BUF_DISABLE       0                /*!< I2C master do not need buffer */
-#define I2C_MASTER_FREQ_HZ              100000           /*!< I2C master clock frequency */
 
-
-#define ACK_CHECK_EN                       0x1              /*!< I2C master will check ack from slave*/
-#define ACK_CHECK_DIS                      0x0              /*!< I2C master will not check ack from slave */
-#define ACK_VAL                            0x0              /*!< I2C ack value */
-#define NACK_VAL                           0x1              /*!< I2C nack value */
 
 #define ADDR_PAGE0 0xA8
 #define ADDR_PAGE1 0xAA
@@ -99,18 +88,8 @@ void E2prom_Init(void)
                        I2C_MASTER_TX_BUF_DISABLE, 0);
 }
 
-int E2prom_BluWrite(uint8_t addr,uint8_t*data_write,int len)
+int E2prom_BluWrite_page1(uint8_t addr,uint8_t*data_write,int len)//蓝牙数据前256个字节存储
 {
-    if((addr%16)!=0)
-    {
-        ESP_LOGE(TAG, "Addr Mast Multiple 16!");
-        return 0;
-    }
-    if(len>256)
-    {
-        ESP_LOGE(TAG, "bludata len must <= 256 byte");
-        return 0;
-    }
     int ret=0;
     int i=0,j=0;
     i=len/16;
@@ -161,7 +140,91 @@ int E2prom_BluWrite(uint8_t addr,uint8_t*data_write,int len)
     data_write=data_write_temp;
     vTaskDelay(20 / portTICK_RATE_MS);
     return ret;
+}
 
+int E2prom_BluWrite_page2(uint8_t addr,uint8_t*data_write,int len)//蓝牙数据后256个字节存储
+{
+    int ret=0;
+    int i=0,j=0;
+    i=len/16;
+    j=len%16;
+    uint8_t *data_write_temp = data_write; 
+    while(i>0)
+    {
+        ret = EE_Page_Write(ADDR_PAGE2,addr,data_write,16);
+        if(ret == ESP_ERR_TIMEOUT) 
+        {
+            ESP_LOGE(TAG, "Write timeout");
+            return ret;
+        } 
+        else if(ret == ESP_OK) 
+        {
+            ESP_LOGI(TAG, "Write ok");
+        } 
+        else 
+        {
+            ESP_LOGE(TAG, "Write No ack, chip not connected");
+            return ret;
+        }
+        data_write+=16;
+        addr+=16;
+        i--;
+        vTaskDelay(20 / portTICK_RATE_MS);
+    }
+
+    if(j>0)
+    {
+        ret = EE_Page_Write(ADDR_PAGE2,addr,data_write,j);
+        if(ret == ESP_ERR_TIMEOUT) 
+        {
+            ESP_LOGE(TAG, "Write timeout");
+            return ret;
+        } 
+        else if(ret == ESP_OK) 
+        {
+            ESP_LOGI(TAG, "Write ok");
+        } 
+        else 
+        {
+            ESP_LOGE(TAG, "Write No ack, chip not connected");
+            return ret;
+        }     
+        j=0;
+    }
+    data_write=data_write_temp;
+    vTaskDelay(20 / portTICK_RATE_MS);
+    return ret;
+}
+
+int E2prom_BluWrite(uint8_t addr,uint8_t*data_write,int len)
+{
+    int ret=0;
+    if((addr%16)!=0)
+    {
+        ESP_LOGE(TAG, "Addr Mast Multiple 16!");
+        return -1;
+    }
+    if(len<=256)
+    {
+        ESP_LOGI(TAG, "bludata len <= 256 byte");
+        ret=E2prom_BluWrite_page1(addr,data_write,len);
+        //printf("addr=%d,data_write=%s,len=%d\n",addr,data_write,len);
+        return ret;
+    }
+    else if((len>256)&&(len<=512))
+    {
+        ESP_LOGI(TAG, "bludata len > 256 byte");
+        printf("data_write=%s,len=%d\n",data_write,len);
+        printf("(data_write+256)=%s,(len-256)=%d\n",(data_write+256),(len-256));
+        ret=E2prom_BluWrite_page1(addr,data_write,256);
+        ret=E2prom_BluWrite_page2(addr,(data_write+256),(len-256));
+        return ret;
+    }
+    else
+    {
+        ESP_LOGE(TAG, "bludata len must <= 512 byte");
+        return -1;
+    }
 }
 
 
@@ -288,12 +351,12 @@ int E2prom_Read(uint8_t addr,uint8_t*data_read,int len)
 
 
 
-int E2prom_BluRead(uint8_t addr,uint8_t*data_read,int len)
+/*int E2prom_BluRead(uint8_t addr,uint8_t*data_read,int len)
 {
     if((addr%16)!=0)
     {
         ESP_LOGE(TAG, "Addr Mast Multiple 16!");
-        return 0;
+        return -1;
     }
     int ret=0;
     int i=0,j=0;
@@ -345,5 +408,59 @@ int E2prom_BluRead(uint8_t addr,uint8_t*data_read,int len)
      data_read=data_read_temp;
      vTaskDelay(20 / portTICK_RATE_MS);
      return ret;
-}
+}*/
 
+int E2prom_BluRead(uint8_t* data_read)
+{
+    int ret=0;
+    int i=0;
+    int addr=0;
+    uint8_t *data_read_temp = data_read; 
+    for(i=0;i<16;i++)//读取前256字节page1扇区
+    {
+        ret = EE_Page_Read(ADDR_PAGE1,addr,data_read,16);
+        if(ret == ESP_ERR_TIMEOUT) 
+        {
+            ESP_LOGE(TAG, "Read timeout");
+            return ret;
+        } 
+        else if(ret == ESP_OK) 
+        {
+            ESP_LOGI(TAG, "Read ok");
+        } 
+        else 
+        {
+            ESP_LOGE(TAG, "Read No ack, chip not connected");
+            return ret;
+        }
+        addr+=16;
+        data_read+=16;
+        vTaskDelay(20 / portTICK_RATE_MS);
+    }
+
+    for(i=0;i<16;i++)//读取后256字节page2扇区
+    {
+        ret = EE_Page_Read(ADDR_PAGE2,addr,data_read,16);
+        if(ret == ESP_ERR_TIMEOUT) 
+        {
+            ESP_LOGE(TAG, "Read timeout");
+            return ret;
+        } 
+        else if(ret == ESP_OK) 
+        {
+            ESP_LOGI(TAG, "Read ok");
+        } 
+        else 
+        {
+            ESP_LOGE(TAG, "Read No ack, chip not connected");
+            return ret;
+        }
+        addr+=16;
+        data_read+=16;
+        vTaskDelay(20 / portTICK_RATE_MS);
+    }
+
+     data_read=data_read_temp;
+     vTaskDelay(20 / portTICK_RATE_MS);
+     return ret;
+}

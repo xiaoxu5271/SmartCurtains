@@ -27,6 +27,7 @@
 #define BLEERR   0x00
 
 char ble_dev_pwd[16];
+uint8_t start_read_blue_ret;
 
 void ble_app_start(void);
 void gap_init(void);
@@ -39,10 +40,10 @@ typedef enum
     BLU_JSON_FORMAT_ERROR,
     BLU_RESULT_SUCCESS,
     BLU_PWD_REFUSE,
-    BLU_WRITE_FLASH_OVER,
     BLU_NO_WIFI_SSID,
     BLU_NO_WIFI_PWD,
-    BLU_WIFI_ERR
+    BLU_COMMAND_SWITCH,
+    BLU_COMMAND_CALCULATION,
 } BLU_error_info;
 
 typedef struct blufi_beacon_s blufi_beacon_t;
@@ -54,6 +55,7 @@ char ApiKey[33];
 char ChannelId[17];
 
 uint8_t Ble_mes_status;
+uint8_t Ble_need_restart;
 
 //#define PROFILE_NUM 1
 //#define PROFILE_APP_ID 0

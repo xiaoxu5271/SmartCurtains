@@ -3,9 +3,6 @@
 
 #include "freertos/event_groups.h"
 
-#define WIFI_CONNET     0X01
-#define WIFI_DISCONNET  0X02
-
 void smartconfig_example_task(void *parm);
 void initialise_wifi(char *wifi_ssid, char *wifi_password);
 void init_wifi(void);
@@ -15,10 +12,9 @@ static const int ESPTOUCH_DONE_BIT = BIT1;
 
 EventGroupHandle_t wifi_event_group;
 
-uint8_t Wifi_Status;
-uint8_t Wifi_ErrCode;            //7  密码错误
-                                //8  未找到指定wifi
-
+#define WIFISTATUS_CONNET       0X01
+#define WIFISTATUS_DISCONNET    0X00
+uint8_t WifiStatus;
 
 
 #endif

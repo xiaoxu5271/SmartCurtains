@@ -20,14 +20,34 @@
 #include "Smartconfig.h"
 #include "Json_parse.h"
 
-#define FIRMWARE  "SP1-V0.0.0"
+#define FIRMWARE  "ILS1-V1.0.0"
 
 
+#define POST_NORMAL      0X00
+#define POST_HEIGHT_ADD  0X01
+#define POST_HEIGHT_SUB  0X02
+#define POST_ANGLE_ADD   0X03
+#define POST_ANGLE_SUB   0X04
+#define POST_ALLDOWN     0X05
+#define POST_ALLUP       0X06
+#define POST_TARGET      0X07 //HTTP直接上传目标值，用于手动切自动的状态上传
+#define POST_NOCOMMAND    0X08 //HTTP只上传平台，无commnd id
 
 void initialise_http(void);
 
-void http_send_mes();
+void http_send_mes(uint8_t post_status);
 int http_activate(void);
+
+#define HTTP_STA_SERIAL_NUMBER 0x00
+#define HTTP_KEY_GET           0x01
+#define HTTP_KEY_NOT_GET       0x02
+/*
+typedef enum HTTP_SEND_STA
+{
+  HTTP_STA_SERIAL_NUMBER = 0x00,
+  HTTP_KEY_GET = 0x01,
+  HTTP_KEY_NOT_GET = 0x02,
+};*/
 
 
 

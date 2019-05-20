@@ -5,8 +5,17 @@
 
 #include "Led.h"
 
-//#define GPIO_LED_B    (GPIO_NUM_32)
-#define GPIO_LED_Y    (GPIO_NUM_33)
+#define GPIO_LED_G    21
+#define GPIO_LED_R    22
+#define GPIO_LED_B    23
+
+void Led_R_On(void);
+void Led_G_On(void);
+void Led_B_On(void);
+void Led_Y_On(void);
+void Led_C_On(void);
+void Led_Off(void);
+
 
 static void Led_Task(void* arg)
 {
@@ -15,56 +24,60 @@ static void Led_Task(void* arg)
         switch(Led_Status)
         {
             case LED_STA_INIT:
-    
                 Led_Y_On();
-                vTaskDelay(10 / portTICK_RATE_MS);
+                vTaskDelay(300 / portTICK_RATE_MS);
+                Led_Off();
+                vTaskDelay(300 / portTICK_RATE_MS);
                 break;
             
             case LED_STA_TOUCH:
-                Led_Y_On();
+                Led_R_On();
                 vTaskDelay(300 / portTICK_RATE_MS);
-      
-  
+                Led_G_On();
+                vTaskDelay(300 / portTICK_RATE_MS);
                 break;
             
             case LED_STA_NOSER:
-                Led_Y_On();
+                Led_R_On();
                 vTaskDelay(10 / portTICK_RATE_MS);
                 break;
             
             case LED_STA_WIFIERR:
-                Led_Y_On();
+                Led_B_On();
                 vTaskDelay(300 / portTICK_RATE_MS);
                 Led_Off();
                 vTaskDelay(300 / portTICK_RATE_MS);
                 break;
 
-            case LED_STA_SENDDATA:
+            case LED_STA_HAND:
                 Led_Y_On();
-                vTaskDelay(200 / portTICK_RATE_MS);
-                Led_Off();
-                Led_Status=LED_STA_DATAOVER;
+                vTaskDelay(10 / portTICK_RATE_MS);
                 break;
-
-            case LED_STA_DATAOVER:
-                Led_Off();
+           
+            case LED_STA_LOCAL:
+                Led_C_On();
                 vTaskDelay(10 / portTICK_RATE_MS);
                 break;
 
-            case LED_STA_RECVDATA:
-                Led_Y_On();
-                vTaskDelay(100 / portTICK_RATE_MS);
+            case LED_STA_AUTO:
+                Led_G_On();
+                vTaskDelay(10 / portTICK_RATE_MS);
+                break;   
+
+
+            case LED_STA_PROTECT:
+                Led_G_On();
+                vTaskDelay(300 / portTICK_RATE_MS);
                 Led_Off();
-                vTaskDelay(100 / portTICK_RATE_MS);
-                
-                Led_Y_On();
-                vTaskDelay(100 / portTICK_RATE_MS);
-                Led_Off();               
-                Led_Status=LED_STA_DATAOVER;
-                break;
+                vTaskDelay(300 / portTICK_RATE_MS);
+                break;                    
 
-
-
+            case LED_STA_FIRE:
+                Led_R_On();
+                vTaskDelay(300 / portTICK_RATE_MS);
+                Led_Off();
+                vTaskDelay(300 / portTICK_RATE_MS);
+                break; 
         }
         
 
@@ -80,13 +93,19 @@ void Led_Init(void)
     //set as output mode
     io_conf.mode = GPIO_MODE_OUTPUT;
     //bit mask of the pins that you want to set,e.g.GPIO16
-    io_conf.pin_bit_mask = (1ULL<<GPIO_LED_Y);
+    io_conf.pin_bit_mask = (1<<GPIO_LED_G);
     //disable pull-down mode
     io_conf.pull_down_en = 0;
     //disable pull-up mode
     io_conf.pull_up_en = 1;
     //configure GPIO with the given settings
     gpio_config(&io_conf);  
+
+    io_conf.pin_bit_mask = (1<<GPIO_LED_R);
+    gpio_config(&io_conf); 
+
+    io_conf.pin_bit_mask = (1<<GPIO_LED_B);
+    gpio_config(&io_conf); 
 
     Led_Status=LED_STA_INIT;
 
@@ -95,19 +114,46 @@ void Led_Init(void)
 }
 
 
-void Led_Y_On(void)
+void Led_R_On(void)
 {
-    gpio_set_level(GPIO_LED_Y, 1);
-    
+    gpio_set_level(GPIO_LED_R, 0);
+    gpio_set_level(GPIO_LED_G, 1);
+    gpio_set_level(GPIO_LED_B, 1);
 }
 
+void Led_G_On(void)
+{
+    gpio_set_level(GPIO_LED_R, 1);
+    gpio_set_level(GPIO_LED_G, 0);
+    gpio_set_level(GPIO_LED_B, 1);
+}
 
+void Led_B_On(void)
+{
+    gpio_set_level(GPIO_LED_R, 1);
+    gpio_set_level(GPIO_LED_G, 1);
+    gpio_set_level(GPIO_LED_B, 0);
+}
 
+void Led_Y_On(void)
+{
+    gpio_set_level(GPIO_LED_R, 0);
+    gpio_set_level(GPIO_LED_G, 0);
+    gpio_set_level(GPIO_LED_B, 1);
+}
+
+void Led_C_On(void)  //青色
+{
+    gpio_set_level(GPIO_LED_R, 1);
+    gpio_set_level(GPIO_LED_G, 0);
+    gpio_set_level(GPIO_LED_B, 0);
+}
 
 void Led_Off(void)
 {
-    gpio_set_level(GPIO_LED_Y, 0);
-   
+    gpio_set_level(GPIO_LED_R, 1);
+    gpio_set_level(GPIO_LED_G, 1);
+    gpio_set_level(GPIO_LED_B, 1);
 }
 
 

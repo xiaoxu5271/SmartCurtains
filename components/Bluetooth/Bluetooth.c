@@ -38,7 +38,7 @@
 #include "cJSON.h"
 #include "Json_parse.h"
 
-#include "Smartconfig.h"
+
 #include "esp_smartconfig.h"
 //#include "gatts_profile.h"
 #include "E2prom.h"
@@ -220,7 +220,7 @@ void example_write_event_env(esp_gatt_if_t gatts_if, prepare_type_env_t *prepare
 void example_exec_write_event_env(prepare_type_env_t *prepare_write_env, esp_ble_gatts_cb_param_t *param);
 
 char buf[512]; // do not free from heap!
-char BleRespond[128]="\0"; // 蓝牙回复
+char BleRespond[64]="{\"result\":\"error\"}"; // 蓝牙回复
 
 void gap_event_handler(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *param)
 {
@@ -374,7 +374,7 @@ static void gatts_profile_a_event_handler(esp_gatts_cb_event_t event, esp_gatt_i
         gl_profile_tab[PROFILE_A_APP_ID].service_id.id.uuid.len = ESP_UUID_LEN_16;
         gl_profile_tab[PROFILE_A_APP_ID].service_id.id.uuid.uuid.uuid16 = GATTS_SERVICE_UUID_TEST_A;
 
-        sprintf(BleName,"%s%s","SP1-",SerialNum);
+        sprintf(BleName,"%s%s","ILS-",SerialNum);
         esp_err_t set_dev_name_ret = esp_ble_gap_set_device_name(BleName);
         if (set_dev_name_ret)
         {
@@ -422,10 +422,12 @@ static void gatts_profile_a_event_handler(esp_gatts_cb_event_t event, esp_gatt_i
         //蓝牙回复
         rsp.attr_value.len = strlen(BleRespond);
         strncpy((char *)(rsp.attr_value.value), BleRespond, strlen(BleRespond));
-        printf("ble respond=%s\n",BleRespond);
 
         esp_ble_gatts_send_response(gatts_if, param->read.conn_id, param->read.trans_id,
                                     ESP_GATT_OK, &rsp);
+
+        //fflush(stdout);//使stdout清空，就会立刻输出所有在缓冲区的内容。
+        //esp_restart();//芯片复位 函数位于esp_system.h
         break;
     }
     case ESP_GATTS_WRITE_EVT:
@@ -493,42 +495,22 @@ static void gatts_profile_a_event_handler(esp_gatts_cb_event_t event, esp_gatt_i
                 memcpy(buf, param->write.value, param->write.len);
                 uint8_t ret=parse_objects_bluetooth(buf);
 
-                if(ret==BLU_JSON_FORMAT_ERROR)//解析蓝牙格式错误
+                if((ret==BLU_PWD_REFUSE)||(ret==BLU_JSON_FORMAT_ERROR))//解析蓝牙且密码错误或格式错误
                 {
                     bzero(BleRespond,sizeof(BleRespond));
-                    strcpy(BleRespond,"{\"result\":\"error\",\"code\":100}");
-                }
-                
-                else if(ret==BLU_WIFI_ERR)//WIFI连接错误
-                {
-                    bzero(BleRespond,sizeof(BleRespond));
-                    if(Wifi_ErrCode==7) //密码错误
-                    {
-                        strcpy(BleRespond,"{\"result\":\"error\",\"code\":201}");
-                    }
-                    else if(Wifi_ErrCode==8) //找不到wifi
-                    {
-                        strcpy(BleRespond,"{\"result\":\"error\",\"code\":202}");
-                    }
-                    else //其他
-                    {
-                        strcpy(BleRespond,"{\"result\":\"error\",\"code\":203}");
-                    }
+                    strcpy(BleRespond,"{\"result\":\"error\"}");
                 }
                 else//解析蓝牙正确且按新参数配置，存储eeprom
                 {
                     bzero(BleRespond,sizeof(BleRespond));
-                    strcpy(BleRespond,"{\"result\":\"success\",\"code\":0}");
+                    strcpy(BleRespond,"{\"result\":\"success\"}");
                     uint8_t zerobuf[256]="\0";
-                    E2prom_BluWrite(0x00, (uint8_t *)zerobuf, 256);
+                    E2prom_BluWrite(0x00, (uint8_t *)zerobuf, 512);//清空蓝牙数据
                     E2prom_BluWrite(0x00, (uint8_t *)buf, param->write.len);
                     Ble_mes_status=BLEOK;
+                    Ble_need_restart=1;
                 }
             }
-            
-
-
-
 
         }
         example_write_event_env(gatts_if, &a_prepare_write_env, param);
