@@ -406,7 +406,6 @@ esp_err_t parse_objects_http_respond(char *http_json_data)
                 printf("http_respond_json_data Json Formatting error\n");
                 return 0;
         }
-
         json_data_parse = cJSON_Parse(http_json_data);
         if (json_data_parse == NULL)
         {

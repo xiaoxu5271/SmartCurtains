@@ -33,48 +33,48 @@ static esp_err_t event_handler(void *ctx, system_event_t *event)
 {
     switch (event->event_id)
     {
-        case SYSTEM_EVENT_STA_START:
-            //esp_wifi_connect();
-            break;
-        case SYSTEM_EVENT_STA_GOT_IP:
-            xEventGroupSetBits(wifi_event_group, CONNECTED_BIT);
-            if(work_status!=WORK_INIT)
+    case SYSTEM_EVENT_STA_START:
+        //esp_wifi_connect();
+        break;
+    case SYSTEM_EVENT_STA_GOT_IP:
+        xEventGroupSetBits(wifi_event_group, CONNECTED_BIT);
+        if (work_status != WORK_INIT)
+        {
+            if ((work_status == WORK_WALLKEY) || (work_status == WORK_HAND))
             {
-                if((work_status==WORK_WALLKEY)||(work_status==WORK_HAND))
-                {
-                    Led_Status=LED_STA_HAND;
-                }
-                else
-                {
-                    Led_Status=LED_STA_LOCAL;
-                }
+                Led_Status = LED_STA_HAND;
             }
-            //Led_Status=LED_STA_INIT;
-            break;
-        case SYSTEM_EVENT_STA_DISCONNECTED:
-            esp_wifi_connect();
-            xEventGroupClearBits(wifi_event_group, CONNECTED_BIT);
-            if(start_read_blue_ret==BLU_RESULT_SUCCESS)//在全功能版本时闪烁故障灯
+            else
             {
-                Led_Status=LED_STA_WIFIERR;
+                Led_Status = LED_STA_LOCAL;
             }
-            break;
-        default:
-            break;
+        }
+        //Led_Status=LED_STA_INIT;
+        break;
+    case SYSTEM_EVENT_STA_DISCONNECTED:
+        esp_wifi_connect();
+        xEventGroupClearBits(wifi_event_group, CONNECTED_BIT);
+        if (start_read_blue_ret == BLU_RESULT_SUCCESS) //在全功能版本时闪烁故障灯
+        {
+            Led_Status = LED_STA_WIFIERR;
+        }
+        break;
+    default:
+        break;
     }
     return ESP_OK;
 }
 
 void initialise_wifi(char *wifi_ssid, char *wifi_password)
 {
-    printf("WIFI Reconnect,SSID=%s,PWD=%s\r\n",wifi_ssid,wifi_password);
-    
+    printf("WIFI Reconnect,SSID=%s,PWD=%s\r\n", wifi_ssid, wifi_password);
+
     ESP_ERROR_CHECK(esp_wifi_get_config(ESP_IF_WIFI_STA, &s_staconf));
     if (s_staconf.sta.ssid[0] == '\0')
     {
         //ESP_ERROR_CHECK(esp_wifi_get_config(ESP_IF_WIFI_STA, &s_staconf));
-        strcpy(s_staconf.sta.ssid, wifi_ssid);
-        strcpy(s_staconf.sta.password, wifi_password);
+        strcpy((char *)s_staconf.sta.ssid, wifi_ssid);
+        strcpy((char *)s_staconf.sta.password, wifi_password);
 
         ESP_ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_STA, &s_staconf));
         ESP_ERROR_CHECK(esp_wifi_start());
@@ -85,8 +85,8 @@ void initialise_wifi(char *wifi_ssid, char *wifi_password)
         ESP_ERROR_CHECK(esp_wifi_stop());
         memset(&s_staconf.sta, 0, sizeof(s_staconf));
         //printf("WIFI CHANGE\r\n");
-        strcpy(s_staconf.sta.ssid, wifi_ssid);
-        strcpy(s_staconf.sta.password, wifi_password);
+        strcpy((char *)s_staconf.sta.ssid, wifi_ssid);
+        strcpy((char *)s_staconf.sta.password, wifi_password);
         ESP_ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_STA, &s_staconf));
         ESP_ERROR_CHECK(esp_wifi_start());
         esp_wifi_connect();
@@ -119,7 +119,6 @@ void initialise_wifi(char *wifi_ssid, char *wifi_password)
     }*/
 }
 
-
 void reconnect_wifi_usr(void)
 {
     printf("WIFI Reconnect\r\n");
@@ -132,7 +131,6 @@ void reconnect_wifi_usr(void)
     ESP_ERROR_CHECK(esp_wifi_start());
     esp_wifi_connect();
 }
-
 
 void init_wifi(void)
 {
