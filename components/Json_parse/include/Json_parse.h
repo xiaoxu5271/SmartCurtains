@@ -27,8 +27,8 @@ esp_err_t creat_object(void);
 #define PROTECT_OFF 0X00 //当前无风速等平台保护状态
 
 #define MAX_AUTO_CTL_TIME (2 * 60)     //平台php不发送高角值，切本地计算时间5min
-#define MAX_WALLKEY_TIME (4 * 60 * 60) //4h
-// #define MAX_WALLKEY_TIME (5 * 60) //墙壁开关控制回自动控制5min
+#define MAX_WALLKEY_TIME (8 * 60 * 60) //8h 墙壁开关控制回自动控制
+// #define MAX_WALLKEY_TIME (5 * 60) //
 
 struct
 {
